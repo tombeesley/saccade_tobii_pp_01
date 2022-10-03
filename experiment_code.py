@@ -11,9 +11,11 @@ import tobii_research as tr
 random.seed() # use clock for random seed
 
 # Experiment parameters
+winWidth = 1440; winHeight = 810
 exp_code = "UNW01" # Unique experiment code
 runET = 0
 timeout_time = 10
+cuePositions = [[-300, 0], [300, 0]]
 
 # get current date and time as string
 x = datetime.datetime.now()
@@ -83,7 +85,6 @@ if runET == 1:
                 writeHeader = False
             w.writerow(gaze_data)
 
-winWidth = 1440; winHeight = 810
 win = visual.Window(
     size=[winWidth, winHeight],
     units="pix",
@@ -113,10 +114,15 @@ stg1 = genTrialSeq(os.path.join(script_dir, "input_files/design.csv"), 2)
 
 trialSeq = stg1
 
-# read in image files and create image array for cues
-cue_files_list = glob.glob('img_files\Cue_*.jpg')
-imgArray = [visual.ImageStim(win, img, size = 300) for img in cue_files_list] # create array of images
-imgArray.insert(0, []) # blank element to ensure images start at index 1
+# # read in image files and create image array for cues
+# cue_files_list = glob.glob('img_files\Cue_*.jpg')
+# imgArray = [visual.ImageStim(win, img, size = 300) for img in cue_files_list] # create array of images
+# imgArray.insert(0, []) # blank element to ensure images start at index 1
+
+# create circle cues
+cueCols = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, -1, -1]]
+cueArray = [visual.Circle(win, size=300, edges=128, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
+cueArray.insert(0, []) # blank element to ensure images start at index 1
 
 # read in instruction slides
 instr_files_list = glob.glob('instruction_files\Slide*.PNG')
@@ -124,6 +130,10 @@ instrArray = [visual.ImageStim(win, img, size=(winWidth, winHeight)) for img in 
 timeout_img = instrArray[2] # image for timeout screen
 rest_break_img = instrArray[3] # image for rest break screen (not implemented in this task)
 debrief_img = instrArray[4] # image for debrief screen
+
+# response letter stimuli
+responseLetter = visual.TextStim(win, color=[-1,-1,-1], font="Arial", height = 30, bold=True, opacity = 0.1, text="K")
+responseBack = visual.Rect(win, size = 30, fillColor = [1, 1, 1])
 
 # present the instructions
 for instr in range(0, 2):
@@ -135,22 +145,53 @@ for instr in range(0, 2):
 if runET == 1:
     my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, gaze_data_callback, as_dictionary=True)
 
+respOptions = ["A", "Z", "K", "M"]
 for trial in trialSeq[0:4,]:
 
     # "trial" is the row from trialSeq, containing info on cues/outcomes etc
-
-    cue1 = imgArray[trial[0]]
-    cue1.pos = [-300, 0]
+    cue1 = cueArray[trial[0]]
+    cue2 = cueArray[trial[1]]
+    if trial[2] == 1: # left/right orientation
+        cue1.pos = cuePositions[0]
+        cue2.pos = cuePositions[1]
+    else:
+        cue1.pos = cuePositions[1]
+        cue2.pos = cuePositions[0]
     cue1.draw()
-    cue2 = imgArray[trial[1]]
-    cue2.pos = [300, 0]
     cue2.draw()
+
+    # write letter response stim on top of cues
+    responseBack.pos = cuePositions[0]
+    responseBack.draw()
+    responseBack.pos = cuePositions[1]
+    responseBack.draw()
+
+    trialResponses = np.random.permutation(respOptions)[0:2]
+
+    if trial[3] == 1:
+        responseLetter.text = trialResponses[0]
+        responseLetter.pos = cuePositions[0] # draw first/correct letter in the left position
+        responseLetter.draw()
+        responseLetter.text = trialResponses[1]
+        responseLetter.pos = cuePositions[1] # draw second/incorrect letter in the right position
+        responseLetter.draw()
+    else:
+        responseLetter.text = trialResponses[1]
+        responseLetter.pos = cuePositions[0] # draw second/incorrect letter in the left position
+        responseLetter.draw()
+        responseLetter.text = trialResponses[0]
+        responseLetter.pos = cuePositions[1] # draw first/correct letter in the right position
+        responseLetter.draw()
+
+    print(trialResponses[0], trialResponses[1])
 
     # stimulus on
     TS = win.flip()
     t_phase = 1  # start of the "stimulus on" phase
 
-    keys = event.waitKeys(keyList=["up", "down"], timeStamped=TS, maxWait=timeout_time)  # wait for response
+    blah = ["1", "2"]
+    keys = event.waitKeys(keyList=blah, timeStamped=TS, maxWait=timeout_time)  # wait for response
+    #keys = event.waitKeys(keyList=trialResponses[0], timeStamped=TS, maxWait=timeout_time)  # wait for response
     print(keys)
 
     acc = 0 # default
@@ -163,14 +204,12 @@ for trial in trialSeq[0:4,]:
     else:
         if len(keys) == 1:  # check there is only 1 response key pressed
             RT = keys[0][1]
-            if keys[0][0] == 'up' and trial[2] == 1:
+            if keys[0][0] == trialResponses[0]:
                 feedback = "Correct!"
                 acc = 1
-            elif keys[0][0] == 'down' and trial[2] == 2:
-                feedback = "Correct!"
-                acc = 1
-            else:
+            elif keys[0][0] == trialResponses[1]:
                 feedback = "Error!"
+                acc = 0
         else:  # detected there were multiple keys pressed
             feedback = "Error!"
             RT = -99
