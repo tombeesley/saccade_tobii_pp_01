@@ -12,7 +12,7 @@ random.seed() # use clock for random seed
 
 # Experiment parameters
 winWidth = 1440; winHeight = 810
-exp_code = "UNW01" # Unique experiment code
+exp_code = "SAC09" # Unique experiment code
 runET = 0
 timeout_time = 10
 cuePositions = [[-300, 0], [300, 0]]
@@ -166,7 +166,7 @@ for trial in trialSeq[0:4,]:
     responseBack.pos = cuePositions[1]
     responseBack.draw()
 
-    trialResponses = np.random.permutation(respOptions)[0:2]
+    trialResponses = random.shuffle(respOptions)[0:2]
 
     if trial[3] == 1:
         responseLetter.text = trialResponses[0]
