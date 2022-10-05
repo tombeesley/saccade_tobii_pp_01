@@ -15,7 +15,7 @@ winWidth = 1440; winHeight = 810
 exp_code = "SAC09" # Unique experiment code
 runET = 0
 timeout_time = 10
-cuePositions = [[-300, 0], [300, 0]]
+cuePositions = [[-400, 0], [400, 0]]
 
 # get current date and time as string
 x = datetime.datetime.now()
@@ -43,7 +43,7 @@ else:
     core.quit()
 
 dataHeader = ['exp_code', 'pNum', 'cue1', 'cue2',
-              'outcome', 'certainty', 'accuracy', 'RT']
+              'cueOrder', 'cueRelevant', 'instruction', 'corRespKey', 'incRespKey', 'accuracy', 'RT']
 with open(dataFile, 'w', newline='') as f:
     wr = csv.writer(f)
     wr.writerow(dataHeader)
@@ -106,13 +106,20 @@ def genTrialSeq(design_filename, blocks):
         newPerm = np.random.permutation(len(stg_design)) # shuffles rows
         stg_trials.append(stg_design[newPerm])
 
-    stg_trials = np.reshape(stg_trials, (-1, 4)) # -1 here signals the missing dimensions, which is auto computed
+    stg_trials = np.reshape(stg_trials, (-1, 5)) # -1 here signals the missing dimensions, which is auto computed
 
     return stg_trials
 
-stg1 = genTrialSeq(os.path.join(script_dir, "input_files/design.csv"), 2)
+# stage 1 is (8 x blocks) trials
 
-trialSeq = stg1
+stg1 = genTrialSeq(os.path.join(script_dir, "input_files/designStg1.csv"), 1) # 2nd parameter is blocks
+
+# stage 1 is (16 x blocks) trials
+stg2 = genTrialSeq(os.path.join(script_dir, "input_files/designStg2.csv"), 1) # 2nd parameter is blocks
+
+trialSeq = np.concatenate((stg1, stg2)) # combine stg1 and stg2 trial sequences
+
+print(trialSeq)
 
 # # read in image files and create image array for cues
 # cue_files_list = glob.glob('img_files\Cue_*.jpg')
@@ -121,7 +128,7 @@ trialSeq = stg1
 
 # create circle cues
 cueCols = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, -1, -1]]
-cueArray = [visual.Circle(win, size=300, edges=128, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
+cueArray = [visual.Circle(win, size=200, edges=256, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
 cueArray.insert(0, []) # blank element to ensure images start at index 1
 
 # read in instruction slides
@@ -130,6 +137,13 @@ instrArray = [visual.ImageStim(win, img, size=(winWidth, winHeight)) for img in 
 timeout_img = instrArray[2] # image for timeout screen
 rest_break_img = instrArray[3] # image for rest break screen (not implemented in this task)
 debrief_img = instrArray[4] # image for debrief screen
+
+# fixation cross
+fixCross = visual.Circle(win, size=20, edges=256, fillColor=[-1,-1,-1], colorSpace='rgb')
+
+# instruction cues
+instrNorm = visual.Circle(win, size=100, edges=256, fillColor=[0,0,0], colorSpace='rgb')
+instrRev = visual.Rect(win, size=100, fillColor=[0,0,0], colorSpace='rgb')
 
 # response letter stimuli
 responseLetter = visual.TextStim(win, color=[-1,-1,-1], font="Arial", height = 30, bold=True, opacity = 0.1, text="K")
@@ -145,8 +159,25 @@ for instr in range(0, 2):
 if runET == 1:
     my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, gaze_data_callback, as_dictionary=True)
 
-respOptions = ["A", "Z", "K", "M"]
-for trial in trialSeq[0:4,]:
+respOptions = ["a", "z", "k", "m"]
+for trial in trialSeq:
+
+    # fixation on
+    fixCross.draw()
+    TS = win.flip()
+    t_phase = 1  # start of the "stimulus on" phase
+    core.wait(1)
+
+    # instruction on
+    if trial[4] == 1:
+        instrNorm.draw()
+    elif trial[4] == 2:
+        instrRev.draw()
+
+    fixCross.draw()
+    TS = win.flip()
+    t_phase = 2  # start of the "stimulus on" phase
+    core.wait(1)
 
     # "trial" is the row from trialSeq, containing info on cues/outcomes etc
     cue1 = cueArray[trial[0]]
@@ -166,32 +197,28 @@ for trial in trialSeq[0:4,]:
     responseBack.pos = cuePositions[1]
     responseBack.draw()
 
-    trialResponses = random.shuffle(respOptions)[0:2]
+    trialResponses = random.sample(respOptions, 2) # get random 2 letters to display
 
     if trial[3] == 1:
-        responseLetter.text = trialResponses[0]
+        responseLetter.text = trialResponses[0].capitalize()
         responseLetter.pos = cuePositions[0] # draw first/correct letter in the left position
         responseLetter.draw()
-        responseLetter.text = trialResponses[1]
+        responseLetter.text = trialResponses[1].capitalize()
         responseLetter.pos = cuePositions[1] # draw second/incorrect letter in the right position
         responseLetter.draw()
     else:
-        responseLetter.text = trialResponses[1]
+        responseLetter.text = trialResponses[1].capitalize()
         responseLetter.pos = cuePositions[0] # draw second/incorrect letter in the left position
         responseLetter.draw()
-        responseLetter.text = trialResponses[0]
+        responseLetter.text = trialResponses[0].capitalize()
         responseLetter.pos = cuePositions[1] # draw first/correct letter in the right position
         responseLetter.draw()
 
-    print(trialResponses[0], trialResponses[1])
-
     # stimulus on
     TS = win.flip()
-    t_phase = 1  # start of the "stimulus on" phase
+    t_phase = 3  # start of the "stimulus on" phase
 
-    blah = ["1", "2"]
-    keys = event.waitKeys(keyList=blah, timeStamped=TS, maxWait=timeout_time)  # wait for response
-    #keys = event.waitKeys(keyList=trialResponses[0], timeStamped=TS, maxWait=timeout_time)  # wait for response
+    keys = event.waitKeys(keyList=trialResponses, timeStamped=TS, maxWait=timeout_time)  # wait for response
     print(keys)
 
     acc = 0 # default
@@ -218,16 +245,16 @@ for trial in trialSeq[0:4,]:
         textFeedback.text = feedback
         textFeedback.draw()
         TS = win.flip()
-        t_phase = 2  # feedback on phase
+        t_phase = 4  # feedback on phase
         core.wait(.5)
 
     # ITI
     TS = win.flip()
-    t_phase = 3  # feedback off, start of ITI phase
+    t_phase = 5  # feedback off, start of ITI phase
     core.wait(1)
 
     # write details to csv
-    trial_data = np.append(trial, [acc, RT])
+    trial_data = np.append(trial, [trialResponses[0], trialResponses[1], acc, RT])
     trial_data = trial_data.astype(str)
     print(trial_data)
     trial_data = np.insert(trial_data, 0, [exp_code, str(subNum)])
