@@ -131,6 +131,9 @@ cueCols = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, -1, -1]]
 cueArray = [visual.Circle(win, size=200, edges=256, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
 cueArray.insert(0, []) # blank element to ensure images start at index 1
 
+
+
+
 # read in instruction slides
 instr_files_list = glob.glob('instruction_files\Slide*.PNG')
 instrArray = [visual.ImageStim(win, img, size=(winWidth, winHeight)) for img in instr_files_list] # create array of images
