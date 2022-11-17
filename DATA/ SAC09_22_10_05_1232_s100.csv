@@ -1,5 +1,0 @@
-exp_code,pNum,cue1,cue2,cueOrder,cueRelevant,instruction,corRespKey,incRespKey,accuracy,RT
-SAC09,100,2,4,1,1,1,a,z,1,0.9472502999997232
-SAC09,100,2,3,2,2,1,z,k,1,0.7941695999998046
-SAC09,100,2,4,2,2,1,m,k,1,0.8560827999990579
-SAC09,100,1,4,1,1,1,m,z,1,0.7698008999996091
