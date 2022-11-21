@@ -140,8 +140,11 @@ print(trialSeq)
 
 # create circle cues
 cueCols = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, -1, -1]]
-cueArray = [visual.Circle(win, size=200, edges=256, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
-cueArray.insert(0, []) # blank element to ensure images start at index 1
+cueColArray = [visual.Circle(win, size=300, edges=256, fillColor=cueCols[cue], colorSpace='rgb') for cue in range(0, 4)] # create array of images
+cueColArray  = np.array(cueColArray)
+cueShuffle = np.random.permutation(4)
+cueColArray = cueColArray[cueShuffle]
+#cueArray.insert(0, []) # blank element to ensure images start at index 1
 
 # read in image files and create image array for cues
 if drinkPref == "NA":
@@ -166,7 +169,9 @@ water_cues = np.array(water_cues) # convert to no array
 cueShuffle = np.random.permutation(2)
 water_cues = water_cues[cueShuffle]
 
-imgArrayCue = np.concatenate((alc_cues, water_cues))
+#imgArrayCue = np.concatenate((alc_cues, water_cues))
+imgArrayCue = cueColArray
+
 
 # read in instruction slides
 instr_files_list = glob.glob('instruction_files\Slide*.PNG')
